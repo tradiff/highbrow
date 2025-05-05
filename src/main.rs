@@ -21,13 +21,14 @@ fn main() {
         let uris: Vec<String> = files.iter()
         .map(|file| file.uri().to_string())
         .collect();
-        build_ui(app, uris, &config);
+        let url = uris.get(0).cloned().unwrap_or_default();
+        build_ui(app, url, &config);
     });
 
     app.run();
 }
 
-fn build_ui(app: &Application, args: Vec<String>, config: &Config) {
+fn build_ui(app: &Application, url: String, config: &Config) {
     let window = ApplicationWindow::builder()
         .application(app)
         .title("Crossroads")
@@ -35,23 +36,33 @@ fn build_ui(app: &Application, args: Vec<String>, config: &Config) {
         .default_height(100)
         .build();
 
-    let button_box = GtkBox::builder()
-        .orientation(Orientation::Horizontal)
+    let vbox = GtkBox::builder()
+        .orientation(Orientation::Vertical)
         .spacing(10)
         .margin_top(10)
         .margin_bottom(10)
         .margin_start(10)
         .margin_end(10)
         .build();
-    window.set_child(Some(&button_box));
+    window.set_child(Some(&vbox));
+
+    let url_label = gtk4::Label::new(Some(&format!("Opening {}", url)));
+    url_label.set_halign(gtk4::Align::Start);
+    vbox.append(&url_label);
+
+    let button_box = GtkBox::builder()
+        .orientation(Orientation::Horizontal)
+        .spacing(10)
+        .build();
+    vbox.append(&button_box);
 
     for browser in &config.browsers {
         let button = Button::builder().label(&browser.label).build();
         let cmd = browser.command.clone();
-        let args_clone = args.clone();
+        let local_url = url.clone();
 
         button.connect_clicked(move |_| {
-            if let Err(e) = Command::new(&cmd).args(&args_clone).spawn() {
+            if let Err(e) = Command::new(&cmd).arg(&local_url).spawn() {
                 eprintln!("Failed to launch {}: {}", cmd, e);
             }
         });
