@@ -70,6 +70,8 @@ version = "0.1.0"
 dependencies = [
  "gio 0.14.8",
  "gtk4",
+ "serde",
+ "toml 0.5.11",
 ]
 
 [[package]]
