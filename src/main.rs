@@ -32,9 +32,8 @@ fn build_ui(app: &Application, url: String, config: &Config) {
     let window = ApplicationWindow::builder()
         .application(app)
         .title("Crossroads")
-        .default_width(300)
-        .default_height(100)
         .build();
+        window.set_resizable(false);
 
     let vbox = GtkBox::builder()
         .orientation(Orientation::Vertical)
