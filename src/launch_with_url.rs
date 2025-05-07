@@ -71,9 +71,11 @@ impl LaunchWithUrl {
             let button = Button::builder().label(&browser.label).build();
             let cmd = browser.command.clone();
             let local_url = url.clone();
+            let app_inner = app.clone();
 
             button.connect_clicked(move |_| {
                 Self::spawn_browser(&cmd, &local_url);
+                app_inner.quit();
             });
             button_box.append(&button);
         }
