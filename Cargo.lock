@@ -30,6 +30,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
 
 [[package]]
+name = "browser-fork"
+version = "0.1.0"
+dependencies = [
+ "gio 0.14.8",
+ "gtk4",
+ "regex",
+ "serde",
+ "toml 0.5.11",
+]
+
+[[package]]
 name = "cairo-rs"
 version = "0.17.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -71,17 +82,6 @@ checksum = "d067ad48b8650848b989a59a86c6c36a995d02d2bf778d45c3c5d57bc2718f02"
 dependencies = [
  "smallvec",
  "target-lexicon",
-]
-
-[[package]]
-name = "crossroads"
-version = "0.1.0"
-dependencies = [
- "gio 0.14.8",
- "gtk4",
- "regex",
- "serde",
- "toml 0.5.11",
 ]
 
 [[package]]

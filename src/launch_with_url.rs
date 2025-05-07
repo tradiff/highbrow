@@ -43,7 +43,7 @@ impl LaunchWithUrl {
     fn build_ui(app: &Application, url: String, config: &Config) {
         let window = ApplicationWindow::builder()
             .application(app)
-            .title("Crossroads")
+            .title("Browser Fork")
             .build();
         window.set_resizable(false);
 

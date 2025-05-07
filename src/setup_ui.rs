@@ -9,7 +9,7 @@ impl SetupUI {
     pub fn show(app: &Application) {
         let window = ApplicationWindow::builder()
             .application(app)
-            .title("Crossroads Setup")
+            .title("Browser Fork Setup")
             .build();
         window.set_default_size(400, 200);
 
@@ -24,11 +24,11 @@ impl SetupUI {
         window.set_child(Some(&vbox));
 
         let title_label = Label::new(None);
-        title_label.set_markup("<span size='xx-large'><b>Crossroads</b></span>");
+        title_label.set_markup("<span size='xx-large'><b>Browser Fork</b></span>");
         title_label.set_halign(gtk4::Align::Center);
         vbox.append(&title_label);
 
-        let default_browser_button = Button::with_label("Set Crossroads as default browser");
+        let default_browser_button = Button::with_label("Set Browser Fork as default browser");
         default_browser_button.set_halign(gtk4::Align::Center);
         default_browser_button.connect_clicked(move |_| {
             Self::set_as_default_browser();
@@ -40,14 +40,14 @@ impl SetupUI {
 
     fn set_as_default_browser() {
         Self::create_desktop_file_if_needed();
-        // Attempt to set Crossroads as the default web browser using xdg-settings
+        // Attempt to set Browser Fork as the default web browser using xdg-settings
         match Command::new("xdg-settings")
             .arg("set")
             .arg("default-web-browser")
-            .arg("crossroads.desktop")
+            .arg("browser-fork.desktop")
             .spawn()
         {
-            Ok(_) => println!("Default browser set to Crossroads."),
+            Ok(_) => println!("Default browser set to Browser Fork."),
             Err(e) => eprintln!("Error setting default browser: {}", e),
         }
     }
@@ -62,7 +62,7 @@ impl SetupUI {
             }
         };
         let desktop_dir = format!("{}/.local/share/applications", home);
-        let desktop_file = format!("{}/crossroads.desktop", desktop_dir);
+        let desktop_file = format!("{}/browser-fork.desktop", desktop_dir);
 
         // Create the directory if it doesn't exist
         if let Err(e) = fs::create_dir_all(&desktop_dir) {
@@ -75,12 +75,12 @@ impl SetupUI {
                 Some(s) => s.to_string(),
                 None => {
                     eprintln!("Error converting executable path to string");
-                    "crossroads".to_string()
+                    "browser-fork".to_string()
                 }
             },
             Err(e) => {
                 eprintln!("Error getting current executable: {}", e);
-                "crossroads".to_string()
+                "browser-fork".to_string()
             }
         };
 
@@ -88,7 +88,7 @@ impl SetupUI {
         let desktop_content = format!("\
 [Desktop Entry]
 Version=1.0
-Name=Crossroads
+Name=Browser Fork
 GenericName=Web Browser
 Comment=Browse the Web
 Exec={} %u
