@@ -1,10 +1,12 @@
 mod config;
+mod setup_ui;
 
 use config::{Config, load_config};
 use gtk4::gio::File;
 use gtk4::prelude::*;
 use gtk4::{Application, ApplicationWindow, Box as GtkBox, Button, Orientation};
 use regex::Regex;
+use setup_ui::SetupUI;
 use std::process::Command;
 
 fn main() {
@@ -14,7 +16,9 @@ fn main() {
         .build();
 
     // When no URIs are provided on startup
-    app.connect_activate(|app| {});
+    app.connect_activate(|app| {
+        SetupUI::show(app);
+    });
 
     // When started with a URI
     app.connect_open(move |app, files, _| {
