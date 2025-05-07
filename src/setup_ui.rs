@@ -1,5 +1,8 @@
 use gtk4::prelude::*;
-use gtk4::{Application, ApplicationWindow, Box as GtkBox, Button, Label, Orientation};
+use gtk4::{
+    Application, ApplicationWindow, Box as GtkBox, Button, ButtonsType, Label, MessageDialog,
+    MessageType, Orientation,
+};
 use std::process::Command;
 use std::{env, fs, path::Path};
 
@@ -47,8 +50,8 @@ impl SetupUI {
             .arg("browser-fork.desktop")
             .spawn()
         {
-            Ok(_) => println!("Default browser set to Browser Fork."),
-            Err(e) => eprintln!("Error setting default browser: {}", e),
+            Ok(_) => Self::show_info_dialog("Default browser set to Browser Fork."),
+            Err(e) => Self::show_error_dialog(&format!("Error setting default browser: {}", e)),
         }
     }
 
@@ -57,7 +60,7 @@ impl SetupUI {
         let home = match env::var("HOME") {
             Ok(h) => h,
             Err(e) => {
-                eprintln!("Error getting HOME directory: {}", e);
+                Self::show_error_dialog(&format!("Error getting HOME directory: {}", e));
                 return;
             }
         };
@@ -66,7 +69,10 @@ impl SetupUI {
 
         // Create the directory if it doesn't exist
         if let Err(e) = fs::create_dir_all(&desktop_dir) {
-            eprintln!("Could not create directory {}: {}", desktop_dir, e);
+            Self::show_error_dialog(&format!(
+                "Could not create directory {}: {}",
+                desktop_dir, e
+            ));
             return;
         }
 
@@ -74,12 +80,12 @@ impl SetupUI {
             Ok(path) => match path.to_str() {
                 Some(s) => s.to_string(),
                 None => {
-                    eprintln!("Error converting executable path to string");
+                    Self::show_error_dialog("Error converting executable path to string");
                     "browser-fork".to_string()
                 }
             },
             Err(e) => {
-                eprintln!("Error getting current executable: {}", e);
+                Self::show_error_dialog(&format!("Error getting current executable: {}", e));
                 "browser-fork".to_string()
             }
         };
@@ -105,9 +111,11 @@ X-Desktop-File-Install-Version=0.27
         // Create the desktop file if it doesn't already exist
         if !Path::new(&desktop_file).exists() {
             match fs::write(&desktop_file, desktop_content) {
-                Ok(_) => println!("Created desktop file at {}", desktop_file),
+                Ok(_) => {
+                    Self::show_info_dialog(&format!("Created desktop file at {}", desktop_file))
+                }
                 Err(e) => {
-                    eprintln!("Error creating desktop file: {}", e);
+                    Self::show_error_dialog(&format!("Error creating desktop file: {}", e));
                     return;
                 }
             }
@@ -117,12 +125,65 @@ X-Desktop-File-Install-Version=0.27
                 .arg(&desktop_dir)
                 .status()
             {
-                Ok(status) if status.success() => println!("Desktop database updated."),
-                Ok(status) => eprintln!("update-desktop-database exited with status: {}", status),
-                Err(e) => eprintln!("Failed to execute update-desktop-database: {}", e),
+                Ok(status) if status.success() => {
+                    Self::show_info_dialog("Desktop database updated.")
+                }
+                Ok(status) => Self::show_error_dialog(&format!(
+                    "update-desktop-database exited with status: {}",
+                    status
+                )),
+                Err(e) => Self::show_error_dialog(&format!(
+                    "Failed to execute update-desktop-database: {}",
+                    e
+                )),
             }
-        } else {
-            println!("Desktop file already exists at {}", desktop_file);
         }
+    }
+
+    fn show_error_dialog(message: &str) {
+        let application = Application::default();
+        let parent_window = application
+            .windows()
+            .first()
+            .and_then(|w| w.downcast_ref::<ApplicationWindow>().cloned());
+
+        let dialog = MessageDialog::builder()
+            .transient_for(&parent_window.unwrap_or_else(|| ApplicationWindow::new(&application)))
+            .modal(true)
+            .buttons(ButtonsType::Close)
+            .message_type(MessageType::Error)
+            .text("Error")
+            .secondary_text(message)
+            .build();
+
+        dialog.connect_response(|dialog, _| {
+            dialog.close();
+        });
+
+        dialog.present();
+    }
+
+    fn show_info_dialog(message: &str) {
+        // Similar to error dialog but with MessageType::Info
+        let application = Application::default();
+        let parent_window = application
+            .windows()
+            .first()
+            .and_then(|w| w.downcast_ref::<ApplicationWindow>().cloned());
+
+        let dialog = MessageDialog::builder()
+            .transient_for(&parent_window.unwrap_or_else(|| ApplicationWindow::new(&application)))
+            .modal(true)
+            .buttons(ButtonsType::Close)
+            .message_type(MessageType::Info)
+            .text("Information")
+            .secondary_text(message)
+            .build();
+
+        dialog.connect_response(|dialog, _| {
+            dialog.close();
+        });
+
+        dialog.present();
     }
 }

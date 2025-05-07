@@ -1,6 +1,6 @@
 use gtk4::gio::File;
 use gtk4::prelude::*;
-use gtk4::{Application, ApplicationWindow, Box as GtkBox, Button, Orientation};
+use gtk4::{Application, ApplicationWindow, Box as GtkBox, Button, MessageDialog, Orientation};
 use regex::Regex;
 use std::process::Command;
 
@@ -28,14 +28,28 @@ impl LaunchWithUrl {
         let matching_rule = compiled_rules.iter().find(|(re, _)| re.is_match(&url));
         if let Some((_, browser_id)) = matching_rule {
             if let Some(browser) = config.browsers.iter().find(|b| &b.id == browser_id) {
-                Self::spawn_browser(&browser.command, &url);
-                app.quit();
+                let result = Self::spawn_browser(app, &browser.command, &url);
+                if result {
+                    app.quit();
+                }
             } else {
-                eprintln!("⚠ no browser with id `{}` in config", browser_id);
-                app.quit();
+                let error_dialog = MessageDialog::builder()
+                    .modal(true)
+                    .message_type(gtk4::MessageType::Error)
+                    .buttons(gtk4::ButtonsType::Close)
+                    .text(&format!("No browser with id '{}' in config", browser_id))
+                    .build();
+
+                error_dialog.set_transient_for(Some(&ApplicationWindow::new(app)));
+                let app_clone = app.clone();
+                error_dialog.connect_response(move |dialog, _response| {
+                    dialog.close();
+                    app_clone.quit();
+                });
+
+                error_dialog.show();
             }
         } else {
-            eprintln!("Loading default ui");
             Self::build_ui(app, url.clone(), &config);
         }
     }
@@ -74,8 +88,10 @@ impl LaunchWithUrl {
             let app_inner = app.clone();
 
             button.connect_clicked(move |_| {
-                Self::spawn_browser(&cmd, &local_url);
-                app_inner.quit();
+                let result = Self::spawn_browser(&app_inner, &cmd, &local_url);
+                if result {
+                    app_inner.quit();
+                }
             });
             button_box.append(&button);
         }
@@ -83,10 +99,27 @@ impl LaunchWithUrl {
         window.present();
     }
 
-    fn spawn_browser(command: &String, url: &String) {
+    fn spawn_browser(app: &Application, command: &String, url: &String) -> bool {
         let result = Command::new(command).arg(url).spawn();
         if let Err(e) = result {
-            eprintln!("Failed to launch {}: {}", command, e);
+            let error_dialog = MessageDialog::builder()
+                .modal(true)
+                .message_type(gtk4::MessageType::Error)
+                .buttons(gtk4::ButtonsType::Close)
+                .text(&format!("Failed to launch {}: {}", command, e))
+                .build();
+
+            error_dialog.set_transient_for(Some(&ApplicationWindow::new(app)));
+            let app_clone = app.clone();
+            error_dialog.connect_response(move |dialog, _response| {
+                dialog.close();
+                app_clone.quit();
+            });
+
+            error_dialog.show();
+            false
+        } else {
+            true
         }
     }
 }
