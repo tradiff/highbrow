@@ -1,16 +1,24 @@
+use serde::Deserialize;
 use std::fs;
 use std::path::PathBuf;
-use serde::Deserialize;
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct Config {
+    pub browsers: Vec<BrowserConfig>,
+    pub rules: Vec<RuleConfig>,
+}
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct BrowserConfig {
+    pub id: String,
     pub label: String,
     pub command: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
-pub struct Config {
-    pub browsers: Vec<BrowserConfig>,
+pub struct RuleConfig {
+    pub regex: String,
+    pub browser_id: String,
 }
 
 pub fn load_config() -> Config {
@@ -18,8 +26,8 @@ pub fn load_config() -> Config {
     let config_path: PathBuf = [home_dir.as_str(), ".config", "crossroads.toml"]
         .iter()
         .collect();
+
     let config_str = fs::read_to_string(&config_path)
-        .expect(&format!("Failed to read config file: {:?}", config_path));
-    toml::from_str(&config_str)
-        .expect("Failed to parse config file")
+        .unwrap_or_else(|_| panic!("Failed to read config file: {:?}", config_path));
+    toml::from_str(&config_str).expect("Failed to parse config file")
 }
