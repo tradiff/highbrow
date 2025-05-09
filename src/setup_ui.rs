@@ -1,10 +1,9 @@
 use gtk4::prelude::*;
 use gtk4::{
-    Application, ApplicationWindow, Box as GtkBox, Button, ButtonsType, Label, MessageDialog,
-    MessageType, Orientation,
+    Align, Application, ApplicationWindow, Box as GtkBox, Button, ButtonsType, Label,
+    MessageDialog, MessageType, Orientation,
 };
-use std::process::Command;
-use std::{env, fs, path::Path};
+use std::{env, fs, path::PathBuf, process::Command};
 
 pub struct SetupUI;
 
@@ -14,7 +13,6 @@ impl SetupUI {
             .application(app)
             .title("Browser Fork Setup")
             .build();
-        window.set_default_size(400, 200);
 
         let vbox = GtkBox::builder()
             .orientation(Orientation::Vertical)
@@ -26,79 +24,67 @@ impl SetupUI {
             .build();
         window.set_child(Some(&vbox));
 
-        let title_label = Label::new(None);
+        let title_label = Label::builder().halign(Align::Center).build();
         title_label.set_markup("<span size='xx-large'><b>Browser Fork</b></span>");
-        title_label.set_halign(gtk4::Align::Center);
         vbox.append(&title_label);
 
-        let default_browser_button = Button::with_label("Set Browser Fork as default browser");
-        default_browser_button.set_halign(gtk4::Align::Center);
-        default_browser_button.connect_clicked(move |_| {
-            Self::set_as_default_browser();
-        });
+        let default_browser_button = Button::builder()
+            .label("Set Browser Fork as default browser")
+            .halign(Align::Center)
+            .build();
+        default_browser_button.connect_clicked(|_| Self::set_as_default_browser());
         vbox.append(&default_browser_button);
 
         window.present();
     }
 
     fn set_as_default_browser() {
-        Self::create_desktop_file_if_needed();
-        // Attempt to set Browser Fork as the default web browser using xdg-settings
-        match Command::new("xdg-settings")
-            .arg("set")
-            .arg("default-web-browser")
-            .arg("browser-fork.desktop")
-            .spawn()
-        {
-            Ok(_) => Self::show_info_dialog("Default browser set to Browser Fork."),
-            Err(e) => Self::show_error_dialog(&format!("Error setting default browser: {}", e)),
+        let _ = Self::create_desktop_file_if_needed();
+        let result = Command::new("xdg-settings")
+            .args(["set", "default-web-browser", "browser-fork.desktop"])
+            .status();
+
+        match result {
+            Ok(status) if status.success() => {
+                SetupUI::show_dialog("Default browser set.", MessageType::Info, "Info")
+            }
+            Ok(status) => SetupUI::show_dialog(
+                &format!("xdg-settings exited with {}", status),
+                MessageType::Error,
+                "Error",
+            ),
+            Err(e) => SetupUI::show_dialog(
+                &format!("Failed to run xdg-settings: {}", e),
+                MessageType::Error,
+                "Error",
+            ),
         }
     }
 
-    fn create_desktop_file_if_needed() {
-        // Determine the path for the desktop file
-        let home = match env::var("HOME") {
-            Ok(h) => h,
-            Err(e) => {
-                Self::show_error_dialog(&format!("Error getting HOME directory: {}", e));
-                return;
-            }
-        };
-        let desktop_dir = format!("{}/.local/share/applications", home);
-        let desktop_file = format!("{}/browser-fork.desktop", desktop_dir);
+    fn create_desktop_file_if_needed() -> Result<(), ()> {
+        let home = env::var("HOME").map_err(|_| ())?;
+        Self::install_icon_if_needed(&home);
 
-        // Create the directory if it doesn't exist
-        if let Err(e) = fs::create_dir_all(&desktop_dir) {
-            Self::show_error_dialog(&format!(
-                "Could not create directory {}: {}",
-                desktop_dir, e
-            ));
-            return;
+        let desktop_dir = PathBuf::from(&home).join(".local/share/applications");
+        fs::create_dir_all(&desktop_dir).map_err(|_| ())?;
+
+        let desktop_file = desktop_dir.join("browser-fork.desktop");
+        if desktop_file.exists() {
+            return Ok(());
         }
 
-        let exe_cmd = match env::current_exe() {
-            Ok(path) => match path.to_str() {
-                Some(s) => s.to_string(),
-                None => {
-                    Self::show_error_dialog("Error converting executable path to string");
-                    "browser-fork".to_string()
-                }
-            },
-            Err(e) => {
-                Self::show_error_dialog(&format!("Error getting current executable: {}", e));
-                "browser-fork".to_string()
-            }
-        };
-
-        // Desktop file content
-        let desktop_content = format!("\
+        let exe_cmd = env::current_exe()
+            .ok()
+            .and_then(|p| p.to_str().map(String::from))
+            .unwrap_or_else(|| "browser-fork".into());
+        let content = format!("\
 [Desktop Entry]
 Version=1.0
 Name=Browser Fork
 GenericName=Web Browser
 Comment=Browse the Web
 Exec={} %u
-Icon=firefox
+Icon=browserfork
 Terminal=false
 Type=Application
 MimeType=text/html;text/xml;application/xhtml+xml;application/vnd.mozilla.xul+xml;text/mml;x-scheme-handler/http;x-scheme-handler/https;
@@ -108,82 +94,83 @@ Keywords=web;browser;internet;
 X-Desktop-File-Install-Version=0.27
 ", exe_cmd);
 
-        // Create the desktop file if it doesn't already exist
-        if !Path::new(&desktop_file).exists() {
-            match fs::write(&desktop_file, desktop_content) {
-                Ok(_) => {
-                    Self::show_info_dialog(&format!("Created desktop file at {}", desktop_file))
-                }
-                Err(e) => {
-                    Self::show_error_dialog(&format!("Error creating desktop file: {}", e));
-                    return;
-                }
-            }
+        fs::write(&desktop_file, content).map_err(|_| ())?;
+        let _ = Command::new("update-desktop-database")
+            .arg(desktop_dir)
+            .status();
+        Ok(())
+    }
 
-            // Update the desktop database
-            match Command::new("update-desktop-database")
-                .arg(&desktop_dir)
-                .status()
-            {
-                Ok(status) if status.success() => {
-                    Self::show_info_dialog("Desktop database updated.")
-                }
-                Ok(status) => Self::show_error_dialog(&format!(
-                    "update-desktop-database exited with status: {}",
-                    status
-                )),
-                Err(e) => Self::show_error_dialog(&format!(
-                    "Failed to execute update-desktop-database: {}",
+    fn install_icon_if_needed(home: &str) {
+        let target_icon_dir = PathBuf::from(&home).join(".local/share/icons/hicolor/symbolic/apps");
+        let target_icon_file = target_icon_dir.join("browserfork.svg");
+        if target_icon_file.exists() {
+            return;
+        }
+
+        if let Err(e) = fs::create_dir_all(&target_icon_dir) {
+            Self::show_dialog(
+                &format!(
+                    "Could not create icon directory {}: {}",
+                    target_icon_dir.display(),
                     e
-                )),
+                ),
+                MessageType::Error,
+                "Error",
+            );
+            return;
+        }
+
+        let exe_dir = match env::current_exe() {
+            Ok(mut path) => {
+                path.pop();
+                path
+            }
+            Err(e) => {
+                Self::show_dialog(
+                    &format!("Error getting executable directory: {}", e),
+                    MessageType::Error,
+                    "Error",
+                );
+                return;
+            }
+        };
+
+        let source_icon_path = exe_dir.join("browserfork.svg");
+        match fs::copy(&source_icon_path, &target_icon_file) {
+            Ok(_) => {}
+            Err(e) => {
+                Self::show_dialog(
+                    &format!("Error copying icon file: {}", e),
+                    MessageType::Error,
+                    "Error",
+                );
             }
         }
     }
 
-    fn show_error_dialog(message: &str) {
+    fn show_dialog(message: &str, msg_type: MessageType, title: &str) {
         let application = Application::default();
         let parent_window = application
             .windows()
             .first()
-            .and_then(|w| w.downcast_ref::<ApplicationWindow>().cloned());
+            .and_then(|w| w.downcast_ref::<ApplicationWindow>().cloned())
+            .unwrap_or_else(|| {
+                ApplicationWindow::builder()
+                    .application(&application)
+                    .build()
+            });
 
         let dialog = MessageDialog::builder()
-            .transient_for(&parent_window.unwrap_or_else(|| ApplicationWindow::new(&application)))
+            .transient_for(&parent_window)
             .modal(true)
             .buttons(ButtonsType::Close)
-            .message_type(MessageType::Error)
-            .text("Error")
+            .message_type(msg_type)
+            .text(title)
             .secondary_text(message)
             .build();
 
-        dialog.connect_response(|dialog, _| {
-            dialog.close();
-        });
-
-        dialog.present();
-    }
-
-    fn show_info_dialog(message: &str) {
-        // Similar to error dialog but with MessageType::Info
-        let application = Application::default();
-        let parent_window = application
-            .windows()
-            .first()
-            .and_then(|w| w.downcast_ref::<ApplicationWindow>().cloned());
-
-        let dialog = MessageDialog::builder()
-            .transient_for(&parent_window.unwrap_or_else(|| ApplicationWindow::new(&application)))
-            .modal(true)
-            .buttons(ButtonsType::Close)
-            .message_type(MessageType::Info)
-            .text("Information")
-            .secondary_text(message)
-            .build();
-
-        dialog.connect_response(|dialog, _| {
-            dialog.close();
-        });
-
+        dialog.connect_response(|d, _| d.close());
         dialog.present();
     }
 }
