@@ -1,7 +1,10 @@
-use gtk4::gdk::{self};
+use gtk4::gdk::{self, Display};
 use gtk4::gio::File;
-use gtk4::{Application, ApplicationWindow, Box as GtkBox, Button, MessageDialog, Orientation};
-use gtk4::{EventControllerKey, prelude::*};
+use gtk4::{
+    Align, Application, ApplicationWindow, Box as GtkBox, Button, ButtonsType, Image, Inhibit,
+    Label, MessageDialog, MessageType, Orientation,
+};
+use gtk4::{CssProvider, EventControllerKey, prelude::*};
 use regex::Regex;
 use std::process::Command;
 
@@ -36,8 +39,8 @@ impl LaunchWithUrl {
             } else {
                 let error_dialog = MessageDialog::builder()
                     .modal(true)
-                    .message_type(gtk4::MessageType::Error)
-                    .buttons(gtk4::ButtonsType::Close)
+                    .message_type(MessageType::Error)
+                    .buttons(ButtonsType::Close)
                     .text(&format!("No browser with id '{}' in config", browser_id))
                     .build();
 
@@ -56,11 +59,28 @@ impl LaunchWithUrl {
     }
 
     fn build_ui(app: &Application, url: String, config: &Config) {
+        let css_provider = CssProvider::new();
+        css_provider.load_from_data(
+            "
+        button {
+            border: none;
+            box-shadow: none;
+        }
+        ",
+        );
+        let display = Display::default().expect("Could not get default display");
+        gtk4::style_context_add_provider_for_display(
+            &display,
+            &css_provider,
+            gtk4::STYLE_PROVIDER_PRIORITY_APPLICATION,
+        );
+
         let window = ApplicationWindow::builder()
             .application(app)
             .title("Browser Fork")
             .resizable(false)
             .mnemonics_visible(true)
+            .modal(true)
             .build();
 
         let vbox = GtkBox::builder()
@@ -73,8 +93,8 @@ impl LaunchWithUrl {
             .build();
         window.set_child(Some(&vbox));
 
-        let url_label = gtk4::Label::new(Some(&format!("Opening {}", url)));
-        url_label.set_halign(gtk4::Align::Start);
+        let url_label = Label::new(Some(&format!("Opening {}", url)));
+        url_label.set_halign(Align::Start);
         vbox.append(&url_label);
 
         let button_box = GtkBox::builder()
@@ -84,10 +104,23 @@ impl LaunchWithUrl {
         vbox.append(&button_box);
 
         for browser in &config.browsers {
-            let button = Button::builder()
-                .label(&browser.label)
-                .use_underline(true)
+            let button_content = GtkBox::builder()
+                .orientation(Orientation::Vertical)
+                .spacing(5)
                 .build();
+
+            let image = Image::from_icon_name(&browser.icon_name);
+            image.set_pixel_size(92);
+            button_content.append(&image);
+
+            let label = Label::new(Some(&browser.label));
+            label.set_use_underline(true);
+            button_content.append(&label);
+            let button = Button::builder().use_underline(true).build();
+            button.set_child(Some(&button_content));
+
+            button_box.append(&button);
+
             let cmd = browser.command.clone();
             let local_url = url.clone();
             let app_inner = app.clone();
@@ -98,7 +131,6 @@ impl LaunchWithUrl {
                     app_inner.quit();
                 }
             });
-            button_box.append(&button);
         }
 
         let app_clone = app.clone();
@@ -106,9 +138,9 @@ impl LaunchWithUrl {
         key_controller.connect_key_pressed(move |_ctrl, keyval, _keycode, _state| {
             if keyval == gdk::Key::Escape {
                 app_clone.quit();
-                gtk4::Inhibit(true)
+                Inhibit(true)
             } else {
-                gtk4::Inhibit(false)
+                Inhibit(false)
             }
         });
         window.add_controller(key_controller);
@@ -121,8 +153,8 @@ impl LaunchWithUrl {
         if let Err(e) = result {
             let error_dialog = MessageDialog::builder()
                 .modal(true)
-                .message_type(gtk4::MessageType::Error)
-                .buttons(gtk4::ButtonsType::Close)
+                .message_type(MessageType::Error)
+                .buttons(ButtonsType::Close)
                 .text(&format!("Failed to launch {}: {}", command, e))
                 .build();
 

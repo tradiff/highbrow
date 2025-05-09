@@ -13,6 +13,7 @@ pub struct BrowserConfig {
     pub id: String,
     pub label: String,
     pub command: String,
+    pub icon_name: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
