@@ -1,6 +1,7 @@
+use gtk4::gdk::{self};
 use gtk4::gio::File;
-use gtk4::prelude::*;
 use gtk4::{Application, ApplicationWindow, Box as GtkBox, Button, MessageDialog, Orientation};
+use gtk4::{EventControllerKey, prelude::*};
 use regex::Regex;
 use std::process::Command;
 
@@ -58,8 +59,9 @@ impl LaunchWithUrl {
         let window = ApplicationWindow::builder()
             .application(app)
             .title("Browser Fork")
+            .resizable(false)
+            .mnemonics_visible(true)
             .build();
-        window.set_resizable(false);
 
         let vbox = GtkBox::builder()
             .orientation(Orientation::Vertical)
@@ -82,7 +84,10 @@ impl LaunchWithUrl {
         vbox.append(&button_box);
 
         for browser in &config.browsers {
-            let button = Button::builder().label(&browser.label).build();
+            let button = Button::builder()
+                .label(&browser.label)
+                .use_underline(true)
+                .build();
             let cmd = browser.command.clone();
             let local_url = url.clone();
             let app_inner = app.clone();
@@ -95,6 +100,18 @@ impl LaunchWithUrl {
             });
             button_box.append(&button);
         }
+
+        let app_clone = app.clone();
+        let key_controller = EventControllerKey::new();
+        key_controller.connect_key_pressed(move |_ctrl, keyval, _keycode, _state| {
+            if keyval == gdk::Key::Escape {
+                app_clone.quit();
+                gtk4::Inhibit(true)
+            } else {
+                gtk4::Inhibit(false)
+            }
+        });
+        window.add_controller(key_controller);
 
         window.present();
     }
