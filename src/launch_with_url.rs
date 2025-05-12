@@ -57,7 +57,15 @@ impl LaunchWithUrl {
             .build();
         window.set_child(Some(&vbox));
 
-        vbox.append(&Label::new(Some(&format!("Opening {}", url))));
+        let truncated_url = if url.len() > 75 {
+            format!("{}...", &url[..75])
+        } else {
+            url.to_string()
+        };
+
+        let label = Label::new(Some(&format!("Opening {}", truncated_url)));
+        label.set_tooltip_text(Some(url));
+        vbox.append(&label);
         let hbox = GtkBox::new(Orientation::Horizontal, 10);
         vbox.append(&hbox);
 
