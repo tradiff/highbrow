@@ -111,7 +111,16 @@ impl LaunchWithUrl {
     }
 
     fn spawn_browser(cmd: &str, url: &str) {
-        if Command::new(cmd).arg(url).spawn().is_err() {
+        let parts: Vec<&str> = cmd.split_whitespace().collect();
+
+        let mut command = Command::new(parts[0]);
+        for arg in parts.iter().skip(1) {
+            command.arg(arg);
+        }
+        // Add the URL as the final argument
+        command.arg(url);
+        
+        if command.spawn().is_err() {
             show_dialog(
                 &format!("Failed to launch {} for {}", cmd, url),
                 MessageType::Error,

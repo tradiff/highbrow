@@ -54,7 +54,7 @@ patterns = [
 ```
 
 - **label**: Browser name shown in the selector UI. Prefix a letter with underscore (_) to create an Alt+Key keyboard shortcut.
-- **command**: The executable command to launch the browser.
+- **command**: The executable command to launch the browser. You can include arguments (e.g. `firefox --private-window` or `firefox -P personal`)
 - **icon_name**: The system icon name from your icon theme.
 - **patterns**: List of regular expressions to match URLs. When a URL matches a pattern, it automatically opens in the corresponding browser. Any URLs that do not match a rule will display the selection UI.
 
