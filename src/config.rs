@@ -5,21 +5,14 @@ use std::path::PathBuf;
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
     pub browsers: Vec<BrowserConfig>,
-    pub rules: Vec<RuleConfig>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct BrowserConfig {
-    pub id: String,
     pub label: String,
     pub command: String,
     pub icon_name: String,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct RuleConfig {
-    pub regex: String,
-    pub browser_id: String,
+    pub patterns: Option<Vec<String>>,
 }
 
 pub fn load_config() -> Config {

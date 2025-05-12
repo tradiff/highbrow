@@ -5,10 +5,10 @@ use gtk4::{
     Label, MessageDialog, MessageType, Orientation,
 };
 use gtk4::{Inhibit, prelude::*};
-use regex::Regex;
+use regex::RegexBuilder;
 use std::process::Command;
 
-use crate::config::Config;
+use crate::config::{BrowserConfig, Config};
 
 pub struct LaunchWithUrl;
 
@@ -19,24 +19,29 @@ impl LaunchWithUrl {
             .map(|f| f.uri().to_string())
             .unwrap_or_default();
 
-        // find the first rule whose regex matches
-        if let Some(browser) = config
-            .rules
-            .iter()
-            .filter_map(|r| {
-                Regex::new(&r.regex)
-                    .ok()
-                    .filter(|re| re.is_match(&url))
-                    .map(|_| r.browser_id.clone())
-            })
-            .filter_map(|id| config.browsers.iter().find(|b| b.id == id))
-            .next()
-        {
+        if let Some(browser) = Self::find_browser_for_url(&url, config) {
             Self::spawn_browser(&browser.command, &url);
             app.quit();
         } else {
             Self::build_ui(app, &url, &config);
         }
+    }
+
+    fn find_browser_for_url(url: &str, config: &Config) -> Option<BrowserConfig> {
+        config
+            .browsers
+            .iter()
+            .find(|b| {
+                b.patterns.as_ref().map_or(false, |pats| {
+                    pats.iter().any(|pat| {
+                        RegexBuilder::new(pat)
+                            .case_insensitive(true)
+                            .build()
+                            .map_or(false, |re| re.is_match(url))
+                    })
+                })
+            })
+            .cloned()
     }
 
     fn build_ui(app: &Application, url: &str, config: &Config) {

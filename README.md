@@ -23,16 +23,10 @@ cd browser-fork
 cargo build --release
 ```
 
-3. Install the binary into your PATH:
+3. Run once to set Browser Fork as your default browser:
 
 ```sh
-cp target/release/browser-fork ~/.local/bin/
-```
-
-4. Run once to set Browser Fork as your default browser:
-
-```
-browser-fork
+target/release/browser-fork
 ```
 
 Use the UI prompt to set Browser Fork as your default browser.
@@ -42,26 +36,36 @@ Create a configuration file at `~/.config/browser-fork.toml` with the following 
 
 ```toml
 [[browsers]]
-id = "firefox"
-label = "_Firefox"
-command = "firefox"
-icon_name = "firefox"
+label = "_Firefox" # Underscore prefix creates the keyboard shortcut Alt+f
+command = "firefox" # Command to launch the browser
+icon_name = "firefox" # System icon name
+patterns = [
+    'https://facebook\.com/.*',
+    'https://spotify\.com/.*',
+]
 
 [[browsers]]
-id = "chromium"
 label = "_Chromium"
 command = "chromium-browser"
 icon_name = "chromium"
-
-[[rules]]
-regex = "https?://(?:.*\\.)?facebook\\.com/.*"
-browser_id = "chromium"
-
-[[rules]]
-regex = "https?://mail\\.google\\.com/.*"
-browser_id = "firefox"
+patterns = [
+    'https://mycompany\.com/.*',
+]
 ```
 
-**browsers**: define each browser with an id, display label, executable command, and icon_name.
+- **label**: Browser name shown in the selector UI. Prefix a letter with underscore (_) to create an Alt+Key keyboard shortcut.
+- **command**: The executable command to launch the browser.
+- **icon_name**: The system icon name from your icon theme.
+- **patterns**: List of regular expressions to match URLs. When a URL matches a pattern, it automatically opens in the corresponding browser. Any URLs that do not match a rule will display the selection UI.
 
-**rules**: list zero or more regex-based rules to map URLs to a browser. Any URLs that do not match a rule will display the selection UI.
+### Example patterns
+
+```toml
+patterns = [
+    # Match exact domain
+    'https://example\.com(/.*)?',
+    
+    # Match http or https, and any subdomains
+    'https?://(.*\.)?example\.com(/.*)?',
+]
+```
