@@ -4,7 +4,7 @@ use std::path::Path;
 
 fn main() {
     let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
-    let source_svg = Path::new(&manifest_dir).join("src/browserfork.svg");
+    let source_svg = Path::new(&manifest_dir).join("src/highbrow.svg");
 
     let out_dir = env::var("OUT_DIR").unwrap();
 
@@ -14,7 +14,7 @@ fn main() {
         target_dir = target_dir.parent().unwrap().to_path_buf();
     }
 
-    let dest_svg = target_dir.join("browserfork.svg");
+    let dest_svg = target_dir.join("highbrow.svg");
 
     println!("Copying SVG icon from: {:?} to: {:?}", source_svg, dest_svg);
     if let Err(e) = fs::copy(source_svg, dest_svg) {
@@ -22,5 +22,5 @@ fn main() {
     }
 
     // Tell Cargo to rerun this script if the SVG file changes
-    println!("cargo:rerun-if-changed=src/browserfork.svg");
+    println!("cargo:rerun-if-changed=src/highbrow.svg");
 }

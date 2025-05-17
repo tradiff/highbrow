@@ -1,6 +1,8 @@
-# Browser Fork
+# Highbrow
 
-A simple browser chooser for Linux with configurable rules to automatically route web URLs to different browsers.
+<p align="center"><img src="./media/highbrow-256x256.png"></p>
+
+For users who appreciate the finer things in life, Highbrow is a lightweight, rule-based browser selector for Linux.
 
 ![screenshot](media/screenshot.png)
 
@@ -13,8 +15,8 @@ A simple browser chooser for Linux with configurable rules to automatically rout
 
 1. Clone the repository:
 ```sh
-git clone https://github.com/tradiff/browser-fork.git
-cd browser-fork
+git clone https://github.com/tradiff/highbrow.git
+cd highbrow
 ```
 
 2. Build in release mode:
@@ -23,16 +25,16 @@ cd browser-fork
 cargo build --release
 ```
 
-3. Run once to set Browser Fork as your default browser:
+3. Run once to set Highbrow as your default browser:
 
 ```sh
-target/release/browser-fork
+target/release/highbrow
 ```
 
-Use the UI prompt to set Browser Fork as your default browser.
+Use the UI prompt to set Highbrow as your default browser.
 
 ## Configuration
-Create a configuration file at `~/.config/browser-fork.toml` with the following structure:
+Create a configuration file at `~/.config/highbrow.toml` with the following structure:
 
 ```toml
 [[browsers]]

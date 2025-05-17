@@ -17,7 +17,7 @@ pub struct BrowserConfig {
 
 pub fn load_config() -> Config {
     let home_dir = std::env::var("HOME").unwrap_or_else(|_| ".".into());
-    let config_path: PathBuf = [home_dir.as_str(), ".config", "browser-fork.toml"]
+    let config_path: PathBuf = [home_dir.as_str(), ".config", "highbrow.toml"]
         .iter()
         .collect();
 

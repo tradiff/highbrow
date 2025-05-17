@@ -47,7 +47,7 @@ impl LaunchWithUrl {
     fn build_ui(app: &Application, url: &str, config: &Config) {
         let window = ApplicationWindow::builder()
             .application(app)
-            .title("Browser Fork")
+            .title("Highbrow")
             .resizable(false)
             .modal(true)
             .build();
