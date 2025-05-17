@@ -3,7 +3,7 @@ use gtk4::{
     Align, Application, ApplicationWindow, Box as GtkBox, Button, ButtonsType, Label,
     MessageDialog, MessageType, Orientation,
 };
-use std::{env, fs, path::PathBuf, process::Command};
+use std::{process::Command};
 
 pub struct SetupUI;
 
@@ -11,9 +11,10 @@ impl SetupUI {
     pub fn show(app: &Application) {
         let window = ApplicationWindow::builder()
             .application(app)
-            .title("Highbrow Setup")
+            .title("Highbrow")
+            .icon_name("highbrow")
             .build();
-
+        
         let vbox = GtkBox::builder()
             .orientation(Orientation::Vertical)
             .spacing(10)
@@ -39,7 +40,6 @@ impl SetupUI {
     }
 
     fn set_as_default_browser() {
-        let _ = Self::create_desktop_file_if_needed();
         let result = Command::new("xdg-settings")
             .args(["set", "default-web-browser", "highbrow.desktop"])
             .status();
@@ -58,94 +58,6 @@ impl SetupUI {
                 MessageType::Error,
                 "Error",
             ),
-        }
-    }
-
-    fn create_desktop_file_if_needed() -> Result<(), ()> {
-        let home = env::var("HOME").map_err(|_| ())?;
-        Self::install_icon_if_needed(&home);
-
-        let desktop_dir = PathBuf::from(&home).join(".local/share/applications");
-        fs::create_dir_all(&desktop_dir).map_err(|_| ())?;
-
-        let desktop_file = desktop_dir.join("highbrow.desktop");
-        if desktop_file.exists() {
-            return Ok(());
-        }
-
-        let exe_cmd = env::current_exe()
-            .ok()
-            .and_then(|p| p.to_str().map(String::from))
-            .unwrap_or_else(|| "highbrow".into());
-        let content = format!("\
-[Desktop Entry]
-Version=1.0
-Name=Highbrow
-GenericName=Web Browser
-Comment=Browse the Web
-Exec={} %u
-Icon=highbrow
-Terminal=false
-Type=Application
-MimeType=text/html;text/xml;application/xhtml+xml;application/vnd.mozilla.xul+xml;text/mml;x-scheme-handler/http;x-scheme-handler/https;
-StartupNotify=true
-Categories=Network;WebBrowser;
-Keywords=web;browser;internet;
-X-Desktop-File-Install-Version=0.27
-", exe_cmd);
-
-        fs::write(&desktop_file, content).map_err(|_| ())?;
-        let _ = Command::new("update-desktop-database")
-            .arg(desktop_dir)
-            .status();
-        Ok(())
-    }
-
-    fn install_icon_if_needed(home: &str) {
-        let target_icon_dir = PathBuf::from(&home).join(".local/share/icons/hicolor/symbolic/apps");
-        let target_icon_file = target_icon_dir.join("highbrow.svg");
-        if target_icon_file.exists() {
-            return;
-        }
-
-        if let Err(e) = fs::create_dir_all(&target_icon_dir) {
-            Self::show_dialog(
-                &format!(
-                    "Could not create icon directory {}: {}",
-                    target_icon_dir.display(),
-                    e
-                ),
-                MessageType::Error,
-                "Error",
-            );
-            return;
-        }
-
-        let exe_dir = match env::current_exe() {
-            Ok(mut path) => {
-                path.pop();
-                path
-            }
-            Err(e) => {
-                Self::show_dialog(
-                    &format!("Error getting executable directory: {}", e),
-                    MessageType::Error,
-                    "Error",
-                );
-                return;
-            }
-        };
-
-        let source_icon_path = exe_dir.join("highbrow.svg");
-        match fs::copy(&source_icon_path, &target_icon_file) {
-            Ok(_) => {}
-            Err(e) => {
-                Self::show_dialog(
-                    &format!("Error copying icon file: {}", e),
-                    MessageType::Error,
-                    "Error",
-                );
-            }
         }
     }
 

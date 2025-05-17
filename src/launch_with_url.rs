@@ -48,8 +48,7 @@ impl LaunchWithUrl {
         let window = ApplicationWindow::builder()
             .application(app)
             .title("Highbrow")
-            .resizable(false)
-            .modal(true)
+            .icon_name("highbrow")
             .build();
 
         let vbox = GtkBox::builder()

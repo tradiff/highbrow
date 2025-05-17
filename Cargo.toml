@@ -1,5 +1,7 @@
 [package]
 name = "highbrow"
+license = "MIT"
+description = "A simple browser chooser"
 version = "0.1.0"
 edition = "2024"
 
@@ -9,3 +11,24 @@ gio = "0.14"
 serde = { version = "1.0", features = ["derive"] }
 toml = "0.5"
 regex = "1.11.1"
+
+[package.metadata.generate-rpm]
+assets = [
+    { source = "target/release/highbrow", dest = "/usr/bin/highbrow", mode = "0755" },
+    { source = "resources/packaging/linux/highbrow.desktop", dest = "/usr/share/applications/highbrow.desktop", mode = "644" },
+    { source = "resources/packaging/linux/graphics/highbrow.svg", dest = "/usr/share/icons/hicolor/scalable/apps/highbrow.svg", mode = "644" },
+
+    { source = "resources/packaging/linux/graphics/highbrow-16x16.png", dest = "/usr/share/icons/hicolor/16x16/apps/highbrow.png", mode = "644" },
+    { source = "resources/packaging/linux/graphics/highbrow-22x22.png", dest = "/usr/share/icons/hicolor/22x22/apps/highbrow.png", mode = "644" },
+    { source = "resources/packaging/linux/graphics/highbrow-24x24.png", dest = "/usr/share/icons/hicolor/24x24/apps/highbrow.png", mode = "644" },
+    { source = "resources/packaging/linux/graphics/highbrow-32x32.png", dest = "/usr/share/icons/hicolor/32x32/apps/highbrow.png", mode = "644" },
+    { source = "resources/packaging/linux/graphics/highbrow-36x36.png", dest = "/usr/share/icons/hicolor/36x36/apps/highbrow.png", mode = "644" },
+    { source = "resources/packaging/linux/graphics/highbrow-48x48.png", dest = "/usr/share/icons/hicolor/48x48/apps/highbrow.png", mode = "644" },
+    { source = "resources/packaging/linux/graphics/highbrow-64x64.png", dest = "/usr/share/icons/hicolor/64x64/apps/highbrow.png", mode = "644" },
+    { source = "resources/packaging/linux/graphics/highbrow-72x72.png", dest = "/usr/share/icons/hicolor/72x72/apps/highbrow.png", mode = "644" },
+    { source = "resources/packaging/linux/graphics/highbrow-96x96.png", dest = "/usr/share/icons/hicolor/96x96/apps/highbrow.png", mode = "644" },
+    { source = "resources/packaging/linux/graphics/highbrow-128x128.png", dest = "/usr/share/icons/hicolor/128x128/apps/highbrow.png", mode = "644" },
+    { source = "resources/packaging/linux/graphics/highbrow-192x192.png", dest = "/usr/share/icons/hicolor/192x192/apps/highbrow.png", mode = "644" },
+    { source = "resources/packaging/linux/graphics/highbrow-256x256.png", dest = "/usr/share/icons/hicolor/256x256/apps/highbrow.png", mode = "644" },
+    { source = "resources/packaging/linux/graphics/highbrow-512x512.png", dest = "/usr/share/icons/hicolor/512x512/apps/highbrow.png", mode = "644" }
+]
