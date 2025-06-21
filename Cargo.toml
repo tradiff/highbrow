@@ -30,5 +30,5 @@ assets = [
     { source = "resources/packaging/linux/graphics/highbrow-128x128.png", dest = "/usr/share/icons/hicolor/128x128/apps/highbrow.png", mode = "644" },
     { source = "resources/packaging/linux/graphics/highbrow-192x192.png", dest = "/usr/share/icons/hicolor/192x192/apps/highbrow.png", mode = "644" },
     { source = "resources/packaging/linux/graphics/highbrow-256x256.png", dest = "/usr/share/icons/hicolor/256x256/apps/highbrow.png", mode = "644" },
-    { source = "resources/packaging/linux/graphics/highbrow-512x512.png", dest = "/usr/share/icons/hicolor/512x512/apps/highbrow.png", mode = "644" }
+    { source = "resources/packaging/linux/graphics/highbrow-512x512.png", dest = "/usr/share/icons/hicolor/512x512/apps/highbrow.png", mode = "644" },
 ]

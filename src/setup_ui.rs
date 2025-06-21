@@ -3,7 +3,7 @@ use gtk4::{
     Align, Application, ApplicationWindow, Box as GtkBox, Button, ButtonsType, Label,
     MessageDialog, MessageType, Orientation,
 };
-use std::{process::Command};
+use std::process::Command;
 
 pub struct SetupUI;
 
@@ -14,7 +14,7 @@ impl SetupUI {
             .title("Highbrow")
             .icon_name("highbrow")
             .build();
-        
+
         let vbox = GtkBox::builder()
             .orientation(Orientation::Vertical)
             .spacing(10)

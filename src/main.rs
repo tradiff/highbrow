@@ -3,10 +3,10 @@ mod launch_with_url;
 mod setup_ui;
 
 use config::load_config;
-use gtk4::gdk::Display;
 use gtk4::Application;
-use gtk4::prelude::*;
 use gtk4::CssProvider;
+use gtk4::gdk::Display;
+use gtk4::prelude::*;
 use launch_with_url::LaunchWithUrl;
 use setup_ui::SetupUI;
 

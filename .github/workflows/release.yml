@@ -27,10 +27,9 @@ jobs:
     env:
       # Define the destination filename pattern once
       dst: highbrow-${{ github.ref_name }}-${{ matrix.name }}
-      
+
     steps:
       - uses: actions/checkout@v3
-      
       - name: Install dependencies (Linux)
         if: matrix.os == 'ubuntu-latest'
         run: |
@@ -73,7 +72,7 @@ jobs:
           release_name: Release ${{ github.ref_name }}
           draft: false
           prerelease: false
-          
+
       - name: Upload RPM
         if: matrix.rpm_enabled
         uses: actions/upload-release-asset@v1
