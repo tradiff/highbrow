@@ -7,7 +7,6 @@ use gtk4::Application;
 use gtk4::CssProvider;
 use gtk4::gdk::Display;
 use gtk4::prelude::*;
-use launch_with_url::LaunchWithUrl;
 use setup_ui::SetupUI;
 
 fn main() {
@@ -25,7 +24,7 @@ fn main() {
 
     // When started with a URI
     app.connect_open(move |app, files, _| {
-        LaunchWithUrl::run(app, files, &config);
+        launch_with_url::run(app, files, &config);
     });
 
     app.run();

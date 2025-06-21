@@ -1,181 +1,225 @@
-use gtk4::gdk;
-use gtk4::gio::File;
+use gdk4::{Display, ModifierType};
+use glib::MainLoop;
 use gtk4::glib::timeout_add_seconds_local;
 use gtk4::{
     Application, ApplicationWindow, Box as GtkBox, Button, ButtonsType, EventControllerKey, Image,
-    Label, MessageDialog, MessageType, Orientation,
+    Label, MessageDialog, MessageType, Orientation, gdk, gio::File, glib, prelude::*,
 };
-use gtk4::{Inhibit, prelude::*};
 use regex::RegexBuilder;
 use std::process::Command;
+use std::sync::{Arc, Mutex};
 
 use crate::config::{BrowserConfig, Config};
 
-pub struct LaunchWithUrl;
+pub fn run(app: &Application, files: &[File], config: &Config) {
+    let url = files
+        .first()
+        .map(|f| f.uri().to_string())
+        .unwrap_or_default();
 
-impl LaunchWithUrl {
-    pub fn run(app: &Application, files: &[File], config: &Config) {
-        let url = files
-            .get(0)
-            .map(|f| f.uri().to_string())
-            .unwrap_or_default();
+    let modifier_pressed = is_modifier_pressed(app);
 
-        if let Some(browser) = Self::find_browser_for_url(&url, config) {
-            Self::spawn_browser(&browser.command, &url);
-            app.quit();
-        } else {
-            Self::build_ui(app, &url, &config);
+    if !modifier_pressed {
+        if let Some(browser) = find_browser_for_url(&url, config) {
+            spawn_browser(&browser.command, &url);
+            return;
         }
     }
 
-    fn find_browser_for_url(url: &str, config: &Config) -> Option<BrowserConfig> {
-        config
-            .browsers
-            .iter()
-            .find(|b| {
-                b.patterns.as_ref().map_or(false, |pats| {
-                    pats.iter().any(|pat| {
-                        RegexBuilder::new(pat)
-                            .case_insensitive(true)
-                            .build()
-                            .map_or(false, |re| re.is_match(url))
-                    })
+    build_ui(app, &url, config);
+}
+
+fn find_browser_for_url(url: &str, config: &Config) -> Option<BrowserConfig> {
+    config
+        .browsers
+        .iter()
+        .find(|b| {
+            b.patterns.as_ref().map_or(false, |pats| {
+                pats.iter().any(|pat| {
+                    RegexBuilder::new(pat)
+                        .case_insensitive(true)
+                        .build()
+                        .map_or(false, |re| re.is_match(url))
                 })
             })
-            .cloned()
+        })
+        .cloned()
+}
+
+fn build_ui(app: &Application, url: &str, config: &Config) {
+    let window = ApplicationWindow::builder()
+        .application(app)
+        .title("Highbrow")
+        .icon_name("highbrow")
+        .decorated(false)
+        .build();
+
+    let vbox = GtkBox::builder()
+        .orientation(Orientation::Vertical)
+        .spacing(10)
+        .margin_top(10)
+        .margin_bottom(10)
+        .margin_start(10)
+        .margin_end(10)
+        .build();
+    window.set_child(Some(&vbox));
+
+    let truncated_url = if url.len() > 75 {
+        format!("{}...", &url[..75])
+    } else {
+        url.to_string()
+    };
+
+    let url_label = Label::new(Some(&truncated_url));
+    url_label.set_tooltip_text(Some(url));
+    vbox.append(&url_label);
+
+    let button_container = create_button_container(config, url, app);
+    vbox.append(&button_container);
+
+    setup_keyboard_shortcuts(&window, app, url, &url_label);
+    window.present();
+}
+
+fn create_button_container(config: &Config, url: &str, app: &Application) -> GtkBox {
+    let container = GtkBox::new(Orientation::Horizontal, 10);
+
+    for browser in &config.browsers {
+        let button = create_browser_button(browser, url, app);
+        container.append(&button);
     }
 
-    fn build_ui(app: &Application, url: &str, config: &Config) {
-        let window = ApplicationWindow::builder()
-            .application(app)
-            .title("Highbrow")
-            .icon_name("highbrow")
-            .build();
+    container
+}
 
-        let vbox = GtkBox::builder()
-            .orientation(Orientation::Vertical)
-            .spacing(10)
-            .margin_top(10)
-            .margin_bottom(10)
-            .margin_start(10)
-            .margin_end(10)
-            .build();
-        window.set_child(Some(&vbox));
+fn create_browser_button(browser: &BrowserConfig, url: &str, app: &Application) -> Button {
+    let button = Button::builder().build();
+    let content = GtkBox::new(Orientation::Vertical, 5);
+    let image = Image::from_icon_name(&browser.icon_name);
+    image.set_pixel_size(92);
+    content.append(&image);
+    let label = Label::new(Some(&browser.label));
+    label.set_use_underline(true);
+    content.append(&label);
+    button.set_child(Some(&content));
+    let cmd = browser.command.clone();
+    let url_clone = url.to_string();
+    let app_clone = app.clone();
 
-        let truncated_url = if url.len() > 75 {
-            format!("{}...", &url[..75])
-        } else {
-            url.to_string()
-        };
+    button.connect_clicked(move |_| {
+        spawn_browser(&cmd, &url_clone);
+        app_clone.quit();
+    });
 
-        let label = Label::new(Some(&truncated_url));
-        label.set_tooltip_text(Some(url));
-        vbox.append(&label);
-        let hbox = GtkBox::new(Orientation::Horizontal, 10);
-        vbox.append(&hbox);
+    button
+}
 
-        for browser in &config.browsers {
-            let btn = Button::builder().build();
-            let content = GtkBox::new(Orientation::Vertical, 5);
-            let image = Image::from_icon_name(&browser.icon_name);
-            image.set_pixel_size(92);
-            content.append(&image);
-            let label = Label::new(Some(&browser.label));
-            label.set_use_underline(true);
-            content.append(&label);
-            btn.set_child(Some(&content));
+fn setup_keyboard_shortcuts(
+    window: &ApplicationWindow,
+    app: &Application,
+    url: &str,
+    label: &Label,
+) {
+    let key_controller = EventControllerKey::new();
+    let app_clone = app.clone();
+    let url_clone = url.to_string();
+    let label_clone = label.clone();
 
-            let cmd = browser.command.clone();
-            let url = url.to_string();
-            let app_clone = app.clone();
-            btn.connect_clicked(move |_| {
-                Self::spawn_browser(&cmd, &url);
-                app_clone.quit();
-            });
-            hbox.append(&btn);
+    key_controller.connect_key_pressed(move |_, keyval, keymod, _| match keyval {
+        gdk::Key::Escape => {
+            app_clone.quit();
+            glib::Propagation::Stop
         }
-
-        let app_clone = app.clone();
-        let url_clone = url.to_string();
-        let key_controller = EventControllerKey::new();
-        key_controller.connect_key_pressed(move |_, keyval, keymod, _| {
-            if keyval == gdk::Key::Escape {
-                app_clone.quit();
-                Inhibit(true)
-            } else if keyval == gdk::Key::c
-                && (keymod & gdk::ModifierType::CONTROL_MASK.bits()) != 0
-            {
-                // Copy URL to clipboard
-                if let Some(display) = gdk::Display::default() {
-                    display.clipboard().set_text(&url_clone);
-
-                    // Show temporary status message
-                    Self::show_status_message(&label, "URL copied to clipboard");
-                }
-                Inhibit(true)
-            } else {
-                Inhibit(false)
+        gdk::Key::c if keymod & gdk::ModifierType::CONTROL_MASK.bits() != 0 => {
+            if let Some(display) = gdk::Display::default() {
+                display.clipboard().set_text(&url_clone);
+                show_status_message(&label_clone, "URL copied to clipboard");
             }
-        });
-        window.add_controller(key_controller);
-
-        window.present();
-    }
-
-    fn spawn_browser(cmd: &str, url: &str) {
-        let parts: Vec<&str> = cmd.split_whitespace().collect();
-
-        let mut command = Command::new(parts[0]);
-        for arg in parts.iter().skip(1) {
-            command.arg(arg);
+            glib::Propagation::Stop
         }
-        // Add the URL as the final argument
-        command.arg(url);
+        _ => glib::Propagation::Proceed,
+    });
+    window.add_controller(key_controller);
+}
 
-        if command.spawn().is_err() {
-            show_dialog(
-                &format!("Failed to launch {} for {}", cmd, url),
-                MessageType::Error,
-                "Error",
-            );
+fn spawn_browser(cmd: &str, url: &str) {
+    let mut parts = cmd.split_whitespace();
+
+    if let Some(program) = parts.next() {
+        let mut command = Command::new(program);
+        command.args(parts).arg(url);
+
+        if let Err(e) = command.spawn() {
+            show_error_dialog(&format!("Failed to launch {}: {}", cmd, e));
         }
-    }
-
-    fn show_status_message(status_label: &Label, message: &str) {
-        let old_message = status_label.text().to_string();
-        status_label.set_text(message);
-        status_label.add_css_class("status-success");
-
-        let status_label_clone = status_label.clone();
-        timeout_add_seconds_local(1, move || {
-            status_label_clone.set_text(&old_message);
-            status_label_clone.remove_css_class("status-success");
-            Continue(false)
-        });
     }
 }
 
-fn show_dialog(message: &str, msg_type: MessageType, title: &str) {
-    let application = Application::default();
-    let parent_window = application
-        .windows()
-        .first()
-        .and_then(|w| w.downcast_ref::<ApplicationWindow>().cloned())
-        .unwrap_or_else(|| {
-            ApplicationWindow::builder()
-                .application(&application)
-                .build()
-        });
+fn show_status_message(status_label: &Label, message: &str) {
+    let original_text = status_label.text().to_string();
+    status_label.set_text(message);
+    status_label.add_css_class("status-success");
 
+    let status_label_clone = status_label.clone();
+    timeout_add_seconds_local(1, move || {
+        status_label_clone.set_text(&original_text);
+        status_label_clone.remove_css_class("status-success");
+        glib::ControlFlow::Break
+    });
+}
+
+fn show_error_dialog(message: &str) {
     let dialog = MessageDialog::builder()
-        .transient_for(&parent_window)
         .modal(true)
         .buttons(ButtonsType::Close)
-        .message_type(msg_type)
-        .text(title)
+        .message_type(MessageType::Error)
+        .text("Error")
         .secondary_text(message)
         .build();
 
     dialog.connect_response(|d, _| d.close());
     dialog.present();
+}
+
+fn is_modifier_pressed(app: &Application) -> bool {
+    let result_state = Arc::new(Mutex::new(ModifierType::empty()));
+    let result_clone = result_state.clone();
+
+    // Create a glib MainLoop to block until focus event
+    let main_loop = MainLoop::new(None, false);
+    let loop_clone = main_loop.clone();
+
+    // Build a tiny window to trigger focus
+    let window = ApplicationWindow::builder()
+        .application(app)
+        .default_width(1)
+        .default_height(1)
+        .decorated(false)
+        .build();
+    window.show();
+
+    // Listen for the window becoming active
+    window.connect_notify(Some("is-active"), move |win, pspec| {
+        if pspec.name() == "is-active" && win.is_active() {
+            // Capture modifier state from GDK
+            if let Some(display) = Display::default() {
+                if let Some(seat) = display.default_seat() {
+                    if let Some(keyboard) = seat.keyboard() {
+                        let state = keyboard.modifier_state();
+                        *result_clone.lock().unwrap() = state;
+                    }
+                }
+            }
+            // Close the temporary window and quit the blocking MainLoop
+            win.close();
+            loop_clone.quit();
+        }
+    });
+
+    // Run until quit() is called
+    main_loop.run();
+
+    // Retrieve and test the result
+    let state = *result_state.lock().unwrap();
+    state.contains(ModifierType::ALT_MASK) || state.contains(ModifierType::CONTROL_MASK)
 }
