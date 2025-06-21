@@ -1,5 +1,6 @@
 use gtk4::gdk;
 use gtk4::gio::File;
+use gtk4::glib::timeout_add_seconds_local;
 use gtk4::{
     Application, ApplicationWindow, Box as GtkBox, Button, ButtonsType, EventControllerKey, Image,
     Label, MessageDialog, MessageType, Orientation,
@@ -67,7 +68,7 @@ impl LaunchWithUrl {
             url.to_string()
         };
 
-        let label = Label::new(Some(&format!("Opening {}", truncated_url)));
+        let label = Label::new(Some(&truncated_url));
         label.set_tooltip_text(Some(url));
         vbox.append(&label);
         let hbox = GtkBox::new(Orientation::Horizontal, 10);
@@ -95,10 +96,22 @@ impl LaunchWithUrl {
         }
 
         let app_clone = app.clone();
+        let url_clone = url.to_string();
         let key_controller = EventControllerKey::new();
-        key_controller.connect_key_pressed(move |_, keyval, _, _| {
+        key_controller.connect_key_pressed(move |_, keyval, keymod, _| {
             if keyval == gdk::Key::Escape {
                 app_clone.quit();
+                Inhibit(true)
+            } else if keyval == gdk::Key::c
+                && (keymod & gdk::ModifierType::CONTROL_MASK.bits()) != 0
+            {
+                // Copy URL to clipboard
+                if let Some(display) = gdk::Display::default() {
+                    display.clipboard().set_text(&url_clone);
+
+                    // Show temporary status message
+                    Self::show_status_message(&label, "URL copied to clipboard");
+                }
                 Inhibit(true)
             } else {
                 Inhibit(false)
@@ -118,7 +131,7 @@ impl LaunchWithUrl {
         }
         // Add the URL as the final argument
         command.arg(url);
-        
+
         if command.spawn().is_err() {
             show_dialog(
                 &format!("Failed to launch {} for {}", cmd, url),
@@ -126,6 +139,19 @@ impl LaunchWithUrl {
                 "Error",
             );
         }
+    }
+
+    fn show_status_message(status_label: &Label, message: &str) {
+        let old_message = status_label.text().to_string();
+        status_label.set_text(message);
+        status_label.add_css_class("status-success");
+
+        let status_label_clone = status_label.clone();
+        timeout_add_seconds_local(1, move || {
+            status_label_clone.set_text(&old_message);
+            status_label_clone.remove_css_class("status-success");
+            Continue(false)
+        });
     }
 }
 

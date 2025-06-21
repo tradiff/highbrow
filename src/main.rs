@@ -37,6 +37,9 @@ fn setup_css_overrides() {
         border-top-left-radius: 0px;
         border-top-right-radius: 0px;
     }
+    .status-success {
+        color: @success_color;
+    }
     ";
     let provider = CssProvider::new();
     provider.load_from_data(css);
