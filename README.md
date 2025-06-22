@@ -9,7 +9,7 @@ For users who appreciate the finer things in life, Highbrow is a lightweight, ru
 ## Features
 
 - Rules-based URL routing: Automatically open URLs in specific browsers based on regex patterns
-- Browser selector: When no rule matches, use the simple UI to choose the browser
+- Browser selector: When no rule matches, use the simple UI to select the browser
 
 ## Getting Started
 

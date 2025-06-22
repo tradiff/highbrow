@@ -12,7 +12,7 @@ use utils::launcher::spawn_browser;
 
 fn main() {
     env_logger::init();
-    log::info!("Starting Highbrow browser chooser");
+    log::info!("Starting Highbrow browser selector");
 
     let config = load_config_or_default();
     log::info!(
