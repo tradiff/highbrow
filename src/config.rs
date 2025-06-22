@@ -8,6 +8,7 @@ use std::path::PathBuf;
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
     pub browsers: Vec<BrowserConfig>,
+    pub default_browser: Option<String>, // Label of the default browser
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -80,6 +81,7 @@ fn create_default_config() -> Config {
                 patterns: None,
             },
         ],
+        default_browser: None,
     }
 }
 
@@ -103,12 +105,25 @@ fn validate_config(config: &Config) -> Result<(), ConfigError> {
         }
     }
 
+    // Validate default browser if specified
+    if let Some(ref default_label) = config.default_browser {
+        let default_exists = config.browsers.iter().any(|b| b.label == *default_label);
+        if !default_exists {
+            return Err(ConfigError::ValidationError(format!(
+                "Default browser '{}' not found in browsers list",
+                default_label
+            )));
+        }
+    }
+
     Ok(())
 }
 
 // Find the first browser that matches the given URL based on configured patterns
+// If no pattern matches and a default browser is configured, return the default browser
 pub fn find_browser_for_url(url: &str, config: &Config) -> Option<BrowserConfig> {
-    config
+    // First, try to find a browser with matching patterns
+    let pattern_match = config
         .browsers
         .iter()
         .find(|b| {
@@ -121,5 +136,22 @@ pub fn find_browser_for_url(url: &str, config: &Config) -> Option<BrowserConfig>
                 })
             })
         })
-        .cloned()
+        .cloned();
+
+    // If a pattern matched, return that browser
+    if pattern_match.is_some() {
+        return pattern_match;
+    }
+
+    // If no pattern matched, try to return the default browser
+    if let Some(ref default_label) = config.default_browser {
+        return config
+            .browsers
+            .iter()
+            .find(|b| b.label == *default_label)
+            .cloned();
+    }
+
+    // No pattern match and no default browser configured
+    None
 }

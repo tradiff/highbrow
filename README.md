@@ -37,6 +37,9 @@ Use the UI prompt to set Highbrow as your default browser.
 Create a configuration file at `~/.config/highbrow.toml` with the following structure:
 
 ```toml
+# Optional: Set a default browser for URLs that don't match any patterns
+default_browser = "_Firefox"
+
 [[browsers]]
 label = "_Firefox" # Underscore prefix creates the keyboard shortcut Alt+f
 command = "firefox" # Command to launch the browser
