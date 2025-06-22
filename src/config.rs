@@ -1,3 +1,4 @@
+use regex::RegexBuilder;
 use serde::Deserialize;
 use std::error::Error;
 use std::fmt;
@@ -103,4 +104,22 @@ fn validate_config(config: &Config) -> Result<(), ConfigError> {
     }
 
     Ok(())
+}
+
+// Find the first browser that matches the given URL based on configured patterns
+pub fn find_browser_for_url(url: &str, config: &Config) -> Option<BrowserConfig> {
+    config
+        .browsers
+        .iter()
+        .find(|b| {
+            b.patterns.as_ref().map_or(false, |pats| {
+                pats.iter().any(|pat| {
+                    RegexBuilder::new(pat)
+                        .case_insensitive(true)
+                        .build()
+                        .map_or(false, |re| re.is_match(url))
+                })
+            })
+        })
+        .cloned()
 }
