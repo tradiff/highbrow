@@ -49,18 +49,17 @@ fn find_browser_for_url(url: &str, config: &Config) -> Option<BrowserConfig> {
 fn build_ui(app: &Application, url: &str, config: &Config) {
     let window = ApplicationWindow::builder()
         .application(app)
-        .title("Highbrow")
+        .title("Select Browser - Highbrow")
         .icon_name("highbrow")
-        .decorated(false)
         .build();
 
     let vbox = GtkBox::builder()
         .orientation(Orientation::Vertical)
-        .spacing(10)
-        .margin_top(10)
-        .margin_bottom(10)
-        .margin_start(10)
-        .margin_end(10)
+        .spacing(15)
+        .margin_top(20)
+        .margin_bottom(20)
+        .margin_start(20)
+        .margin_end(20)
         .build();
     window.set_child(Some(&vbox));
 
@@ -72,7 +71,13 @@ fn build_ui(app: &Application, url: &str, config: &Config) {
 
     let url_label = Label::new(Some(&truncated_url));
     url_label.set_tooltip_text(Some(url));
+    url_label.add_css_class("url-label");
+    url_label.set_selectable(true);
     vbox.append(&url_label);
+
+    let instructions = Label::new(Some("Select a browser or press Escape to cancel"));
+    instructions.add_css_class("dim-label");
+    vbox.append(&instructions);
 
     let button_container = create_button_container(config, url, app);
     vbox.append(&button_container);
@@ -94,7 +99,9 @@ fn create_button_container(config: &Config, url: &str, app: &Application) -> Gtk
 
 fn create_browser_button(browser: &BrowserConfig, url: &str, app: &Application) -> Button {
     let button = Button::builder().build();
-    let content = GtkBox::new(Orientation::Vertical, 5);
+    button.add_css_class("browser-button");
+
+    let content = GtkBox::new(Orientation::Vertical, 8);
     let image = Image::from_icon_name(&browser.icon_name);
     image.set_pixel_size(92);
     content.append(&image);
